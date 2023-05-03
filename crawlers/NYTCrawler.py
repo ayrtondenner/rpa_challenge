@@ -13,6 +13,14 @@ class NYTCrawler(WebCrawler):
         super().__init__()
 
     def extract_data(self, variables_dict):
+        """Extract data from website
+
+        Args:
+            variables_dict (dict): Variables dictionary
+
+        Returns:
+            list: list of article dicts
+        """
         self.variables_dict = variables_dict
 
         article_info_list = []
@@ -24,7 +32,7 @@ class NYTCrawler(WebCrawler):
             self.__open_browser_in_website__(self.variables_dict["website"])
 
             self.__access_search_page__(self.variables_dict["search_phrase"], self.variables_dict["website_query"])
-            self.__close_cookies_windows__()
+            self.__close_cookies_window__()
             self.__apply_date_range_filter__(self.variables_dict["months"])
             self.__apply_section_filter__(self.variables_dict["news_category_or_section"])
             self.__select_sort_by_newest__()
@@ -44,6 +52,12 @@ class NYTCrawler(WebCrawler):
     # But in real life, I would probably do a direct access to search URL. Example:
     # self.__browser__.go_to(https://www.nytimes.com/search?query=economy&sections=Opinion%7Cnyt%3A%2F%2Fsection%2Fd7a71185-aa60-5635-bce0-5fab76c7c297&sort=newest&startDate=20230401&endDate=20230502)
     def __access_search_page__(self, query, website_query):
+        """Access search page
+
+        Args:
+            query (str): the query search
+            website_query (str): the URL for the direct search page
+        """
         print_debug_log("Accessing search page")
         try:
             self.__browser__.click_button("xpath://button[@data-test-id='search-button']")
@@ -59,15 +73,21 @@ class NYTCrawler(WebCrawler):
             self.__browser__.go_to(website_query_url)
         print_debug_log("Search page accessed")
 
-    def __close_cookies_windows__(self):
+    def __close_cookies_window__(self):
+        """Close the cookies window
+        """
         print_debug_log("Closing cookies window")
         try:
             self.__browser__.click_button("xpath://button[@data-testid='expanded-dock-btn-selector']")
         except Exception as ex:
             print_debug_log(f"Error when closing cookies window: {ex}")
 
-
     def __apply_date_range_filter__(self, months):
+        """Apply the date range filter
+
+        Args:
+            months (int): The "months" filter
+        """
         try:
             print_debug_log("Applying date filter")
 
@@ -93,13 +113,19 @@ class NYTCrawler(WebCrawler):
         print_debug_log("Date filter done")
 
     def __apply_section_filter__(self, news_category_list):
+        """Apply the section filter
+
+        Args:
+            news_category_list (list): the list of news categories filters
+        """
         print_debug_log("Applying sections filter")
 
         try:
             # If there's no category to select, we can let the filter as it is
             # Which is the "Any" category
             if len(news_category_list) == 0:
-                pass
+                print_debug_log("No section filter to select")
+                return
 
             section_selector = self.__browser__.find_element("xpath://button[@data-testid='search-multiselect-button']")
             section_selector.click()
@@ -129,6 +155,8 @@ class NYTCrawler(WebCrawler):
 
 
     def __select_section_any__(self):
+        """Select the "any" option in the section filter
+        """
         try:
             section_button = self.__browser__.find_element(f"xpath://button[@data-testid='search-multiselect-button']")
 
@@ -147,6 +175,8 @@ class NYTCrawler(WebCrawler):
             print_debug_log(f"Error when applying 'Any' section filter: {ex}")
 
     def __select_sort_by_newest__(self):
+        """Select the "sort by newest" option in the search page
+        """
         print_debug_log("Sorting by newest")
 
         try:
@@ -165,6 +195,8 @@ class NYTCrawler(WebCrawler):
     # since the sort update will already update the query result
     # But if anything wrong happens, this click will ensure that the search will happen anyway
     def __press_search_page_button__(self):
+        """Press the "search" button
+        """
         print_debug_log("Pressing search button")
         try:
             self.__browser__.click_button("xpath://button[@data-testid='search-page-submit']")
@@ -173,6 +205,14 @@ class NYTCrawler(WebCrawler):
             print_debug_log(f"Error when pressing the search button: {ex}")
 
     def __extract_articles__(self, query):
+        """Scrolls through all query results and extract all articles info
+
+        Args:
+            query (str): the search query
+
+        Returns:
+            list: the list of articles dict info
+        """
         article_info_list = []
 
         try:
@@ -184,6 +224,8 @@ class NYTCrawler(WebCrawler):
             return article_info_list
 
     def __scroll_all_articles__(self):
+        """Scroll all articles in search page
+        """
         print_debug_log("Scrolling articles list")
 
         show_more_button_xpath = "xpath://button[@data-testid='search-show-more-button']"
@@ -213,6 +255,15 @@ class NYTCrawler(WebCrawler):
 
 
     def __click_in_show_more_button__(self, show_more_button_xpath, articles_xpath):
+        """Click in the "show more" button
+
+        Args:
+            show_more_button_xpath (str): the xpath for the "show more" button
+            articles_xpath (str): the xpath for all articles
+
+        Returns:
+            bool: returns a variable to show if the bot should keeps trying to click in the button
+        """
         articles_count = self.__get_element_count__(articles_xpath)
 
         click_tries = 0
@@ -255,6 +306,14 @@ class NYTCrawler(WebCrawler):
             
 
     def __get_articles_info__(self, query):
+        """Get info from all visible articles
+
+        Args:
+            query (str): the search query
+
+        Returns:
+            list: the list of articles info dict
+        """
         print_debug_log("Extracting info from articles")
 
         article_info_list = []
@@ -268,9 +327,7 @@ class NYTCrawler(WebCrawler):
         for i in range(1, articles_count + 1):
             try:
 
-                # Using full chained xpath
-                # because using element.find_elements to find children
-                # only throws exception
+                # Using full chained xpath because using element.find_elements to find children only throws exception
                 article_children_div_xpath = f"{articles_xpath}[{i}]/div/"
                 picture_xpath = f"{article_children_div_xpath}div/figure/div/img"
 

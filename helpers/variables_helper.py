@@ -5,6 +5,11 @@ from helpers.debug_helper import print_debug_log
 from helpers.constants import RPADefaultFilters, URLs
 
 def get_work_variables():
+    """Read the filters variables to be used by the crawler
+
+    Returns:
+        dict: a dictionary with all needed variables
+    """
 
     print_debug_log("Getting variables")
 

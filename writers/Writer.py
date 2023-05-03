@@ -13,6 +13,8 @@ class Writer(object):
         self.article_info_list = article_info_list
 
     def write_report(self):
+        """Read article info list, creates a folder, download all related images and writes a report
+        """
         try:
             self.__create_empty_output_folder__()
             self.__get_filename_from_urls__()
@@ -28,6 +30,8 @@ class Writer(object):
             print_debug_log(f"Error when writing report: {ex}")
 
     def __create_empty_output_folder__(self):
+        """Deletes the output folder if it exists, and creates an empty output folder
+        """
         try:
             print_debug_log("Checking output folder")
             
@@ -44,9 +48,13 @@ class Writer(object):
             print_debug_log(f"Error when deleting output folder: {ex}")
 
     def __get_filename_from_urls__(self):
+        """Get filenames from images url
+        """
         self.article_info_list = [self.__get_filename_from_url__(article_info) for article_info in self.article_info_list]
 
     def __delete_urls_from_article_list__(self):
+        """Delete 'picture_url' property from articles info, since this information shouldn't be in the report
+        """
 
         for article_info in self.article_info_list:
             if "picture_url" in article_info:
@@ -55,6 +63,8 @@ class Writer(object):
                 del article_info["picture_url"]
 
     def __download_all_pictures__(self):
+        """Creates a multiprocessing pool to download all articles images
+        """
         try:
 
             articles_count = len(self.article_info_list)
@@ -77,10 +87,23 @@ class Writer(object):
             print_debug_log(f"Error when downloading all pictures: {ex}")
 
     def __write_report_file__(self):
+        """Method that must be implemented in child class
+
+        Raises:
+            NotImplementedError: this method must be implemented in child class
+        """
         raise NotImplementedError("Calling generic __write_report_file__ method")
 
 
     def __get_filename_from_url__(self, article_info):
+        """Get filename from article image url
+
+        Args:
+            article_info (str): article info dict
+
+        Returns:
+            str: the image filename
+        """
         try:
             if article_info["picture_url"] != None:
 
@@ -94,6 +117,14 @@ class Writer(object):
             return article_info
     
     def __download_picture__(self, article_info):
+        """Downloads a single image from article info
+
+        Args:
+            article_info (dict): a single article info
+
+        Returns:
+            bool: returns if the image was downloaded successfully
+        """
 
         if article_info["picture_url"] == None:
             return True

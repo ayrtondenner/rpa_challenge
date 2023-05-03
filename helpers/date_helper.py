@@ -6,6 +6,14 @@ import datetime, re, calendar
 from dateutil.relativedelta import relativedelta
 
 def fixing_months_variable(months):
+    """Fixing 'months' filter
+
+    Args:
+        months (int): the months filter in number
+
+    Returns:
+        int: the months filter int after fixing it
+    """
     try:
         if not type(months) == int:
             months = RPADefaultFilters.MONTHS
@@ -18,6 +26,16 @@ def fixing_months_variable(months):
         return months
 
 def calculate_start_and_end_date(months):
+    """Calculates start and end date depending on the months integer filter.
+    The start date will be the first day of the first month.
+    The end date will be the current day
+    
+    Args:
+        months (int): the months int filter
+
+    Returns:
+        str, str: the start and end date as strings
+    """
     today = datetime.datetime.now()
 
     # Adding one day because of how nyt website works
@@ -46,6 +64,15 @@ def calculate_start_and_end_date(months):
         return start_date_string, end_date_string
 
 def convert_hours_ago_label_to_today_date(date):
+    """When an article was posted today, NYTimes doesn't show the date, but a "hours ago" label.
+    Example: 3h ago -> 5 May.
+
+    Args:
+        date (str): the date label
+
+    Returns:
+        str: the date label after the fix
+    """
     try:
         if len(re.findall(Regexes.HOURS_AGO_REGEX, date)) > 0:
             today = datetime.datetime.now()
