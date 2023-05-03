@@ -2,8 +2,9 @@ from RPA.Browser.Selenium import Selenium
 from RPA.Robocorp.WorkItems import WorkItems
 from RPA.Robocorp.Vault import Vault
 
-import default_variables
+import default_variables, ReportWriter
 from helpers import date_helper
+from helpers.debug_helper import print_debug_log
 
 from datetime import datetime
 import time, re
@@ -11,6 +12,8 @@ import time, re
 browser_lib = Selenium()
 
 def get_work_variables():
+
+    print_debug_log("Getting variables")
 
     website = default_variables.WEBSITE
     website_query = default_variables.WEBSITE_QUERY
@@ -41,6 +44,8 @@ def get_work_variables():
         months = default_variables.MONTHS
 
     finally:
+        print_debug_log("Variables loaded")
+
         return {
             "website": website,
             "website_query": website_query,
@@ -50,8 +55,10 @@ def get_work_variables():
         }
 
 def open_the_website(url):
-    # open_headless_chrome_browser
-    browser_lib.open_available_browser(url)
+    print_debug_log("Opening the website")
+    browser_lib.open_headless_chrome_browser(url)
+    #browser_lib.open_available_browser(url)
+    print_debug_log("Website open")
 
 
 # The test says to navigate to website, fill a term in the search field, and click it
@@ -59,6 +66,7 @@ def open_the_website(url):
 # But in real life, I would probably do a direct access to search URL. Example:
 # browser_lib.go_to(https://www.nytimes.com/search?query=economy&sections=Opinion%7Cnyt%3A%2F%2Fsection%2Fd7a71185-aa60-5635-bce0-5fab76c7c297&sort=newest&startDate=20230401&endDate=20230502)
 def access_search_page(query, website_query):
+    print_debug_log("Accessing search page")
     try:
         # assert_page_contains
         browser_lib.click_button("xpath://button[@data-testid='nav-button']")
@@ -67,17 +75,19 @@ def access_search_page(query, website_query):
     except Exception as ex:
         website_query_url = website_query.format(query = query)
         browser_lib.go_to(website_query_url)
+    print_debug_log("Search page accessed")
 
 def close_cookies_windows():
+    print_debug_log("Closing cookies window")
     try:
         browser_lib.click_button("xpath://button[@data-testid='expanded-dock-btn-selector']")
     except:
-        printing_message("Error when closing cookies window")
+        print_debug_log("Error when closing cookies window")
 
 
 def apply_date_range_filter(months):
     try:
-        # Applying months filter
+        print_debug_log("Applying date filter")
 
         # Fixing months if something happens
         months = date_helper.fixing_months_variable(months)
@@ -96,9 +106,13 @@ def apply_date_range_filter(months):
         # Clicking again to dismiss the dialog
         date_range_selector.click()
     except Exception as ex:
-        printing_message("Error when applying date range filter")
+        print_debug_log("Error when applying date range filter")
+
+    print_debug_log("Date filter done")
 
 def apply_section_filter(news_category_list):
+    print_debug_log("Applying sections filter")
+
     try:
         # If there's no category to select, we can let the filter as it is
         # Which is the "Any" category
@@ -115,19 +129,21 @@ def apply_section_filter(news_category_list):
                 if section_search_count == 1:
                     browser_lib.click_element(f"//span[text()='{news_category}']")
                 else:
-                    printing_message(f"Section '{news_category}' not found")
+                    print_debug_log(f"Section '{news_category}' not found")
             except Exception as ex:
-                printing_message(f"Error when trying to select '{news_category}' filter section")
+                print_debug_log(f"Error when trying to select '{news_category}' filter section")
 
         # Clicking again to dismiss the dialog
         section_selector.click()
         #a = 5 / 0
     except Exception as ex:
-        printing_message("Error when applying section filter")
+        print_debug_log("Error when applying section filter")
 
         # If any major error happens
         # we will go back to selecting "Any" section
         select_section_any()
+
+    print_debug_log("Section filter done")
 
 
 def select_section_any():
@@ -146,9 +162,11 @@ def select_section_any():
         section_button.click()
 
     except:
-        printing_message("Error when applying 'Any' section filter")
+        print_debug_log("Error when applying 'Any' section filter")
 
 def select_sort_by_newest():
+    print_debug_log("Sorting by newest")
+
     try:
         sort_selector = browser_lib.find_element("xpath://select[@data-testid='SearchForm-sortBy']")
 
@@ -157,14 +175,20 @@ def select_sort_by_newest():
         
         # Clicking again to dismiss the dialog
         sort_selector.click()
+        print_debug_log("Selected sort by newest")
     except:
-        printing_message("Error when sorting by newest")
+        print_debug_log("Error when sorting by newest")
 
 # In best case scenario, isn't needed to press this button
 # since the sort update will already update the query result
 # But if anything wrong happens, this click will ensure that the search will happen anyway
 def press_search_page_button():
-    browser_lib.click_button("xpath://button[@data-testid='search-page-submit']")
+    print_debug_log("Pressing search button")
+    try:
+        browser_lib.click_button("xpath://button[@data-testid='search-page-submit']")
+        print_debug_log("Search button pressed")
+    except Exception as ex:
+        print_debug_log("Error when pressing the search button")
 
 def extract_articles(query):
     scroll_all_articles()
@@ -173,6 +197,8 @@ def extract_articles(query):
     return article_info_list
 
 def scroll_all_articles():
+    print_debug_log("Scrolling articles list")
+
     show_more_button_xpath = "xpath://button[@data-testid='search-show-more-button']"
     articles_xpath = "xpath://ol[@data-testid='search-results']//li[@data-testid='search-bodega-result']"
     articles_count = 0
@@ -195,11 +221,17 @@ def scroll_all_articles():
 
             browser_lib.scroll_element_into_view(show_more_button_xpath)
             browser_lib.click_button_when_visible(show_more_button_xpath)
+
+            print_debug_log(f"Scrolled through {articles_count} articles")
         except Exception as ex:
             break
+
+    print_debug_log(f"Total scrolling of {articles_count} articles")
         
 
 def get_articles_info(query):
+    print_debug_log("Extracting info from articles")
+
     article_info_list = []
 
     articles_xpath = "xpath://ol[@data-testid='search-results']//li[@data-testid='search-bodega-result']"
@@ -217,13 +249,14 @@ def get_articles_info(query):
             title = get_attribute_inner_html            (f"{article_children_div_xpath}div/div/a/h4")
             date = get_attribute_inner_html             (f"{article_children_div_xpath}span")
             description = get_attribute_inner_html      (f"{article_children_div_xpath}div/div/a/p[1]")
-            picture_filename = browser_lib.find_element (f"{article_children_div_xpath}div/figure/div/img").get_attribute("src")
+            picture_url = browser_lib.find_element (f"{article_children_div_xpath}div/figure/div/img").get_attribute("src")
             
+            date = date_helper.convert_hours_ago_label_to_today_date(date)
             title_lower = title.lower()
             description_lower = description.lower()
 
             search_phrases_count = title_lower.count(query_lower) + description_lower.count(query_lower)
-            contains_any_amount_of_money = (
+            contains_money = (
                 len(re.findall(default_variables.CURRENCY_REGEX_LIST_JOINED, title_lower)) > 0
                 or
                 len(re.findall(default_variables.CURRENCY_REGEX_LIST_JOINED, description_lower)) > 0
@@ -233,23 +266,22 @@ def get_articles_info(query):
                 "title": title,
                 "date": date,
                 "description": description,
-                "picture_filename": picture_filename,
+                "picture_url": picture_url,
                 "search_phrases_count": search_phrases_count,
-                "contains_any_amount_of_money": contains_any_amount_of_money
+                "contains_money": contains_money
             }
 
             article_info_list.append(article_dict)
 
         except Exception as ex:
-            printing_message(ex)
+            print_debug_log(ex)
 
+    print_debug_log("Info extracted from all articles")
+    
     return article_info_list
 
 def store_screenshot(filename):
     browser_lib.screenshot(filename=filename)
-
-def printing_message(message):
-    print(f"{str(datetime.now())} - {message}")
 
 def get_attribute_inner_html(element_path):
     return browser_lib.find_element(element_path).get_attribute("innerHTML")
@@ -268,9 +300,14 @@ def main():
         press_search_page_button()
         article_info_list = extract_articles(variables["search_phrase"])
     except Exception as ex:
-        printing_message(ex)
+        print_debug_log(ex)
     finally:
+        print_debug_log("Closing browser")
         browser_lib.close_all_browsers()
+
+    print_debug_log("Crawler work is done!")
+
+    ReportWriter.write_report(article_info_list)
 
 
 # Call the main() function, checking that we are running as a stand-alone script:
