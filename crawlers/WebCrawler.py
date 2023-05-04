@@ -54,8 +54,8 @@ class WebCrawler:
         """
         print_debug_log(f"Opening browser in url: {url}")
 
-        #self.__browser__.open_headless_chrome_browser(url)
-        self.__browser__.open_available_browser(url)
+        self.__browser__.open_headless_chrome_browser(url)
+        #self.__browser__.open_available_browser(url)
 
         self.__browser__.maximize_browser_window()
         print_debug_log("Website open")
