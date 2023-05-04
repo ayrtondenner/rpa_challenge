@@ -6,7 +6,7 @@ from helpers import date_helper
 from helpers.debug_helper import print_debug_log
 
 import re
-from helpers.constants import Regexes, OtherConstants
+from helpers.constants import Regexes, OtherConstants, XPaths
 
 class NYTCrawler(WebCrawler):
     def __init__(self):
@@ -63,9 +63,9 @@ class NYTCrawler(WebCrawler):
         """
         print_debug_log("Accessing search page")
         try:
-            self.__browser__.click_button("xpath://button[@data-test-id='search-button']")
-            self.__browser__.input_text("xpath://input[@data-testid='search-input']", query)
-            self.__browser__.click_button("xpath://button[@data-test-id='search-submit']")
+            self.__browser__.click_button(XPaths.MAIN_PAGE_SEARCH_BUTTON)
+            self.__browser__.input_text(XPaths.MAIN_PAGE_SEARCH_INPUT, query)
+            self.__browser__.click_button(XPaths.MAIN_PAGE_SEARCH_SUBMIT)
         except Exception as ex:
             # If something wrong happens, let's go straight to the search page
 
@@ -81,7 +81,7 @@ class NYTCrawler(WebCrawler):
         """
         print_debug_log("Closing cookies window")
         try:
-            self.__browser__.click_button("xpath://button[@data-testid='expanded-dock-btn-selector']")
+            self.__browser__.click_button(XPaths.COOKIE_WINDOW_CLOSE_BUTTON)
         except Exception as ex:
             print_debug_log(f"Error when closing cookies window: {ex}")
 
@@ -95,12 +95,12 @@ class NYTCrawler(WebCrawler):
         try:
             print_debug_log("Applying date filter")
 
-            date_range_selector = self.__browser__.find_element("xpath://button[@data-testid='search-date-dropdown-a']")
+            date_range_selector = self.__browser__.find_element(XPaths.SEARCH_PAGE_DATE_DROPDOWN)
             date_range_selector.click()
             
             # Unfortunately there's no id for this button or any parent element
             # So we had to go after child button via "value" property
-            self.__browser__.click_button("xpath://div[@aria-label='Date Range']//button[@value='Specific Dates']")
+            self.__browser__.click_button(XPaths.SEARCH_PAGE_SPECIFIC_DATES)
             
             self.__browser__.input_text("startDate", start_date_string)
             self.__browser__.input_text("endDate", end_date_string)
@@ -127,15 +127,17 @@ class NYTCrawler(WebCrawler):
                 print_debug_log("No section filter to select")
                 return
 
-            section_selector = self.__browser__.find_element("xpath://button[@data-testid='search-multiselect-button']")
+            section_selector = self.__browser__.find_element(XPaths.SEARCH_PAGE_SECTION_DROPDOWN)
             section_selector.click()
 
             for news_category in news_category_list:
                 try:
-                    section_search_count = self.__get_element_count__(f"//span[text()='{news_category}']")
+                    news_category_xpath = XPaths.SEARCH_PAGE_SECTION_SELECTOR.format(news_category = news_category)
+
+                    section_search_count = self.__get_element_count__(news_category_xpath)
 
                     if section_search_count == 1:
-                        self.__browser__.click_element(f"//span[text()='{news_category}']")
+                        self.__browser__.click_element(news_category_xpath)
                     else:
                         print_debug_log(f"Section '{news_category}' not found")
                 except Exception as ex:
@@ -158,7 +160,7 @@ class NYTCrawler(WebCrawler):
         """Select the "any" option in the section filter
         """
         try:
-            section_button = self.__browser__.find_element(f"xpath://button[@data-testid='search-multiselect-button']")
+            section_button = self.__browser__.find_element(XPaths.SEARCH_PAGE_SECTION_DROPDOWN)
 
             section_button_class = section_button.get_attribute("class")
 
@@ -166,7 +168,7 @@ class NYTCrawler(WebCrawler):
             if not "popup-visible" in section_button_class:
                 section_button.click()
 
-            self.__browser__.click_element(f"//span[text()='Any']")
+            self.__browser__.click_element(XPaths.SEARCH_PAGE_SECTION_ANY_SELECTOR)
 
             # Clicking again to dismiss the dialog
             section_button.click()
@@ -180,10 +182,10 @@ class NYTCrawler(WebCrawler):
         print_debug_log("Sorting by newest")
 
         try:
-            sort_selector = self.__browser__.find_element("xpath://select[@data-testid='SearchForm-sortBy']")
+            sort_selector = self.__browser__.find_element(XPaths.SEARCH_PAGE_SORT_BY_SELECTOR)
 
             sort_selector.click()
-            self.__browser__.click_element("xpath://select[@data-testid='SearchForm-sortBy']/option[@value='newest']")
+            self.__browser__.click_element(XPaths.SEARCH_PAGE_SORT_BY_NEWEST)
             
             # Clicking again to dismiss the dialog
             sort_selector.click()
@@ -199,7 +201,7 @@ class NYTCrawler(WebCrawler):
         """
         print_debug_log("Pressing search button")
         try:
-            self.__browser__.click_button("xpath://button[@data-testid='search-page-submit']")
+            self.__browser__.click_button(XPaths.SEARCH_PAGE_SEARCH_BUTTON)
             print_debug_log("Search button pressed")
         except Exception as ex:
             print_debug_log(f"Error when pressing the search button: {ex}")
@@ -228,20 +230,17 @@ class NYTCrawler(WebCrawler):
         """
         print_debug_log("Scrolling articles list")
 
-        show_more_button_xpath = "xpath://button[@data-testid='search-show-more-button']"
-        articles_xpath = "xpath://ol[@data-testid='search-results']//li[@data-testid='search-bodega-result']"
-
         keep_trying = True
         
-        while self.__get_element_count__(show_more_button_xpath) == 1 and keep_trying:
+        while self.__get_element_count__(XPaths.SEARCH_PAGE_SHOW_MORE_BUTTON) == 1 and keep_trying:
             try:
-                keep_trying = self.__click_in_show_more_button__(show_more_button_xpath, articles_xpath)
+                keep_trying = self.__click_in_show_more_button__()
 
             # Sometimes, when clicking the last instance of "show more" button, the following situation appears
             # The bot checks that the button still exists, then NYT website destroys the button, and then the bot will try to click the button that previously existed
             # Because Selenium is faster than the destruction of the button, it's important to check any issue related when trying to click it
             except ElementNotFound as ex:
-                if show_more_button_xpath in str(ex):
+                if XPaths.SEARCH_PAGE_SHOW_MORE_BUTTON in str(ex):
                     print_debug_log("Stopped after no more instances of \"show more\" button")
                 else:
                     print_debug_log(f"Stopped after unexpected \"ElementNotFound\" error: {ex}")
@@ -250,21 +249,17 @@ class NYTCrawler(WebCrawler):
             except Exception as ex:
                 print_debug_log(f"Stopped after unexpected \"Exception\" error: {ex}")
 
-        articles_count = self.__get_element_count__(articles_xpath)
+        articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
         print_debug_log(f"Total scrolling of {articles_count} articles")
 
 
-    def __click_in_show_more_button__(self, show_more_button_xpath, articles_xpath):
+    def __click_in_show_more_button__(self):
         """Click in the "show more" button
-
-        Args:
-            show_more_button_xpath (str): the xpath for the "show more" button
-            articles_xpath (str): the xpath for all articles
 
         Returns:
             bool: returns a variable to show if the bot should keeps trying to click in the button
         """
-        articles_count = self.__get_element_count__(articles_xpath)
+        articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
 
         click_tries = 0
         keep_trying = True
@@ -272,11 +267,11 @@ class NYTCrawler(WebCrawler):
         while True:
             try:
 
-                self.__browser__.scroll_element_into_view(show_more_button_xpath)
-                self.__browser__.click_button_when_visible(show_more_button_xpath)
+                self.__browser__.scroll_element_into_view(XPaths.SEARCH_PAGE_SHOW_MORE_BUTTON)
+                self.__browser__.click_button_when_visible(XPaths.SEARCH_PAGE_SHOW_MORE_BUTTON)
 
                 # Let's wait for the page to load more articles
-                await_condition = f"return document.querySelectorAll(\"ol[data-testid='search-results'] li[data-testid='search-bodega-result']\").length > {articles_count}"
+                await_condition = XPaths.SEARCH_PAGE_LOAD_ARTICLES_AWAIT_CONDITION.format(articles_count = articles_count)
                 self.__browser__.wait_for_condition(await_condition, 10)
 
                 break
@@ -299,7 +294,7 @@ class NYTCrawler(WebCrawler):
                 print_debug_log(f"Exception when clicking \"show more\" button: {ex}")
                 break
 
-        articles_count = self.__get_element_count__(articles_xpath)
+        articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
         print_debug_log(f"Scrolled through {articles_count} articles")
 
         return keep_trying
@@ -318,8 +313,7 @@ class NYTCrawler(WebCrawler):
 
         article_info_list = []
 
-        articles_xpath = "xpath://ol[@data-testid='search-results']//li[@data-testid='search-bodega-result']"
-        articles_count = self.__get_element_count__(articles_xpath)
+        articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
 
         query_lower = query.lower()
 
@@ -327,13 +321,12 @@ class NYTCrawler(WebCrawler):
         for i in range(1, articles_count + 1):
             try:
 
-                # Using full chained xpath because using element.find_elements to find children only throws exception
-                article_children_div_xpath = f"{articles_xpath}[{i}]/div/"
-                picture_xpath = f"{article_children_div_xpath}div/figure/div/img"
+                
+                picture_xpath = XPaths.ARTICLE_PICTURE.format(i = i)
 
-                title = self.__get_attribute_inner_html__        (f"{article_children_div_xpath}div/div/a/h4")
-                date = self.__get_attribute_inner_html__         (f"{article_children_div_xpath}span")
-                description = self.__get_attribute_inner_html__  (f"{article_children_div_xpath}div/div/a/p[1]")
+                title = self.__get_attribute_inner_html__        (XPaths.ARTICLE_TITLE.format(i = i))
+                date = self.__get_attribute_inner_html__         (XPaths.ARTICLE_DATE.format(i = i))
+                description = self.__get_attribute_inner_html__  (XPaths.ARTICLE_DESCRIPTION.format(i = i))
                 picture_url = None            
 
                 # Some articles do not have image
