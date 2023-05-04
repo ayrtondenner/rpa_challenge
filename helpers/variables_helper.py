@@ -36,7 +36,10 @@ def get_work_variables():
         months = work_items.get_work_item_variable(RPADefaultFilters.MONTHS)
         if not type(months) == int or months < 0: months = RPADefaultFilters.MONTHS
 
+        print_debug_log("Input values loaded successfully.")
+
     except Exception as ex:
+        print_debug_log("Error when loading variables. Loading default values")
         search_phrase = RPADefaultFilters.SEARCH_PHRASE
         news_category_or_section = RPADefaultFilters.NEWS_CATEGORY_OR_SECTION
         months = RPADefaultFilters.MONTHS
