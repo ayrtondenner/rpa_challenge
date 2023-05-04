@@ -11,6 +11,7 @@ dependencies:
   - python=3.9.13            # https://pyreadiness.org/3.9/
 
   - pip=22.3                 # https://pip.pypa.io/en/stable/news/
+  - xlsxwriter=3.1.0         # https://anaconda.org/conda-forge/xlsxwriter
   - pip:
       # Define pip packages here.
       # https://pypi.org/
