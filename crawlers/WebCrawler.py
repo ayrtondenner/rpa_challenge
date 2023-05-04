@@ -1,5 +1,6 @@
 from RPA.Browser.Selenium import Selenium
 from helpers.debug_helper import print_debug_log
+from helpers import date_helper
 
 class WebCrawler:
     def __init__(self):
@@ -12,6 +13,38 @@ class WebCrawler:
             NotImplementedError: this method must be implemented in child class
         """
         raise NotImplementedError("Calling generic extract_data method")
+    
+    def __print_variable_dictionary__(self, variables_dict):
+        """Print all relevant variables used in robot crawler
+
+        Args:
+            variables_dict (dict): the variables dictionary
+        """
+        website = variables_dict['website']
+        search_query = variables_dict['search_phrase']
+        news_section = variables_dict['news_category_or_section']
+        months = variables_dict['months']
+
+        print_debug_log(f"Website: '{website}'")
+        print_debug_log(f"Search query: '{search_query}'")
+        print_debug_log(f"News section: {news_section}")
+        print_debug_log(f"Months: {months}")
+
+    def __calculate_start_and_end_date_strings__(self, months):
+        """Calculates start and end date strings
+
+        Args:
+            months (int): the months int filter
+
+        Returns:
+            str, str: the start and end date as strings
+        """
+
+        # Fixing months value
+        months = date_helper.fixing_months_variable(months)
+        start_date_string, end_date_string = date_helper.calculate_start_and_end_date(months)
+
+        return start_date_string, end_date_string
     
     def __open_browser_in_website__(self, url):
         """Start a new browser instance and open it in the url

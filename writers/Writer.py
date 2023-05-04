@@ -79,7 +79,7 @@ class Writer(object):
             pool.join()
 
             download_success_count = download_results.count(True)
-            download_success_percentage = round(download_success_count/articles_count * 100)
+            download_success_percentage = round(download_success_count/articles_count * 100, 4)
 
             print_debug_log(f"Downloaded with success {download_success_count}/{articles_count} ({download_success_percentage}%) images")
 

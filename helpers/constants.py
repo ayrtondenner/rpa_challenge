@@ -1,7 +1,7 @@
 class RPADefaultFilters:
     SEARCH_PHRASE = "Economy"
     NEWS_CATEGORY_OR_SECTION = ["Test A", "Business", "Test B", "Opinion", "U.S.", "Week in Review", "World"]
-    MONTHS = 5
+    MONTHS = 2
 
 class URLs:
     WEBSITE = "https://www.nytimes.com/"

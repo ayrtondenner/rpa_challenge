@@ -29,11 +29,14 @@ class NYTCrawler(WebCrawler):
 
         try:
 
+            self.__print_variable_dictionary__(self.variables_dict)
+            start_date_string, end_date_string = self.__calculate_start_and_end_date_strings__(self.variables_dict["months"])
+
             self.__open_browser_in_website__(self.variables_dict["website"])
 
             self.__access_search_page__(self.variables_dict["search_phrase"], self.variables_dict["website_query"])
             self.__close_cookies_window__()
-            self.__apply_date_range_filter__(self.variables_dict["months"])
+            self.__apply_date_range_filter__(start_date_string, end_date_string)
             self.__apply_section_filter__(self.variables_dict["news_category_or_section"])
             self.__select_sort_by_newest__()
             self.__press_search_page_button__()
@@ -48,7 +51,7 @@ class NYTCrawler(WebCrawler):
             return article_info_list
 
     # The test says to navigate to website, fill a term in the search field, and click it
-    # That's why I've done this way
+    # That's why I followed these steps
     # But in real life, I would probably do a direct access to search URL. Example:
     # self.__browser__.go_to(https://www.nytimes.com/search?query=economy&sections=Opinion%7Cnyt%3A%2F%2Fsection%2Fd7a71185-aa60-5635-bce0-5fab76c7c297&sort=newest&startDate=20230401&endDate=20230502)
     def __access_search_page__(self, query, website_query):
@@ -82,18 +85,15 @@ class NYTCrawler(WebCrawler):
         except Exception as ex:
             print_debug_log(f"Error when closing cookies window: {ex}")
 
-    def __apply_date_range_filter__(self, months):
+    def __apply_date_range_filter__(self, start_date_string, end_date_string):
         """Apply the date range filter
 
         Args:
-            months (int): The "months" filter
+            start_date_string (str): The start date
+            end_date_string (str): The end date
         """
         try:
             print_debug_log("Applying date filter")
-
-            # Fixing months if something happens
-            months = date_helper.fixing_months_variable(months)
-            start_date_string, end_date_string = date_helper.calculate_start_and_end_date(months)
 
             date_range_selector = self.__browser__.find_element("xpath://button[@data-testid='search-date-dropdown-a']")
             date_range_selector.click()
@@ -191,7 +191,7 @@ class NYTCrawler(WebCrawler):
         except Exception as ex:
             print_debug_log(f"Error when sorting by newest: {ex}")
 
-    # In best case scenario, isn't needed to press this button
+    # In best case scenario, we do not need to press this button
     # since the sort update will already update the query result
     # But if anything wrong happens, this click will ensure that the search will happen anyway
     def __press_search_page_button__(self):
