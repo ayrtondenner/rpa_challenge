@@ -2,6 +2,8 @@ from RPA.Browser.Selenium import Selenium
 from helpers.debug_helper import print_debug_log
 from helpers import date_helper
 
+from urllib.parse import urljoin, urlparse
+
 class WebCrawler:
     def __init__(self):
         self.__browser__ = Selenium()
@@ -98,3 +100,18 @@ class WebCrawler:
             print_debug_log(f"Error when getting element count: {ex}")
         finally:
             return element_count
+        
+    def __remove_params_from_url_string__(self, url_string):
+        """Remove params from URL string
+
+        Args:
+            url_string (str): the crude url string
+
+        Returns:
+            str: the url string without any params
+        """
+        try:
+            return urljoin(url_string, urlparse(url_string).path)
+        except Exception as ex:
+            print_debug_log(f"Error when removing params from url {url_string}: {ex}")
+            return url_string

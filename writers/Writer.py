@@ -67,14 +67,30 @@ class Writer(object):
         """
         try:
 
-            articles_count = len(self.article_info_list)
+            unique_images_list = []
+            
+            for article_info in self.article_info_list:
 
-            print_debug_log(f"Downloading {articles_count} images and using {cpu_count()} CPUs")
+                # Ignoring articles without image url
+                if article_info["picture_url"] == None:
+                    continue
+
+                image_search = [image_dict for image_dict in unique_images_list if image_dict["picture_filename"] == article_info["picture_filename"]]
+
+                if len(image_search) == 0:
+                    unique_images_list.append({
+                        "picture_url": article_info["picture_url"],
+                        "picture_filename": article_info["picture_filename"]
+                    })
+
+            articles_count = len(unique_images_list)
+
+            print_debug_log(f"Downloading {articles_count} unique images and using {cpu_count()} CPUs")
 
             # Creating pool of CPU workers to parallelize images download
 
             pool = Pool(cpu_count())
-            download_results = pool.map(self.__download_picture__, self.article_info_list)
+            download_results = pool.map(self.__download_picture__, unique_images_list)
             pool.close()
             pool.join()
 
@@ -126,19 +142,30 @@ class Writer(object):
             bool: returns if the image was downloaded successfully
         """
 
-        if article_info["picture_url"] == None:
-            return True
+        if (
+            article_info["picture_url"] == None or article_info["picture_url"] == ""
+            or
+            article_info["picture_filename"] == None or article_info["picture_filename"] == ""
+        ):
+            print_debug_log(f"Image without url or filename")
+            return False
 
         try:
             picture_url = article_info["picture_url"]
             picture_filename = article_info["picture_filename"]
+            picture_path = f"{self.__OUTPUT_FOLDER__}/{picture_filename}"
 
             response = requests.get(picture_url)
 
-            with open(f"{self.__OUTPUT_FOLDER__}/{picture_filename}", "wb") as f:
+            with open(picture_path, "wb") as f:
                 f.write(response.content)
 
-            return True
+            is_image_saved = os.path.isfile(picture_path)
+
+            if not is_image_saved:
+                print_debug_log(f"Image {picture_url} was not saved!")
+
+            return is_image_saved
         except Exception as ex:
             print_debug_log(f"Error when downloading image {picture_filename}: {ex}")
 
