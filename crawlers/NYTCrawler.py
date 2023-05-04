@@ -257,15 +257,22 @@ class NYTCrawler(WebCrawler):
         except Exception as ex:
             print_debug_log(f"Error when reading search results label: {ex}")
 
-        keep_trying = True
+        keep_clicking_show_more_button = True
+
+        articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
+
+        # Today, NYTimes is only loading in batches of 10 articles
+        # But if this changes in the future, it won't affect our bot
+        articles_to_read_count = articles_count - len(article_info_list)
+        article_info_sublist = self.__get_articles_info__(query, articles_to_read_count, results_count)
+        article_info_list.extend(article_info_sublist)
         
-        while self.__get_element_count__(XPaths.SEARCH_PAGE_SHOW_MORE_BUTTON) == 1 and keep_trying:
+        while self.__get_element_count__(XPaths.SEARCH_PAGE_SHOW_MORE_BUTTON) == 1 and keep_clicking_show_more_button:
             try:
-                keep_trying = self.__click_in_show_more_button_and_load_more_data__()
+                keep_clicking_show_more_button = self.__click_in_show_more_button_and_load_more_data__()
                 articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
 
-                # Today, NYTimes is only loading in batches of 10 articles
-                # But if this changes in the future, it won't affect our bot
+                # Reading the new loaded articles
                 articles_to_read_count = articles_count - len(article_info_list)
                 article_info_sublist = self.__get_articles_info__(query, articles_to_read_count, results_count)
                 article_info_list.extend(article_info_sublist)
@@ -302,7 +309,7 @@ class NYTCrawler(WebCrawler):
         articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
 
         click_tries = 0
-        keep_trying = True
+        keep_clicking_show_more_button = True
 
         while True:
             try:
@@ -331,13 +338,13 @@ class NYTCrawler(WebCrawler):
                 else:
                     # After trying a few times, the button won't work anymore
                     print_debug_log(f"We already tried {click_tries} times. The button is not going to work anymore")
-                    keep_trying = False
+                    keep_clicking_show_more_button = False
                     break
             except Exception as ex:
                 print_debug_log(f"Exception when clicking \"show more\" button: {ex}")
                 break
 
-        return keep_trying
+        return keep_clicking_show_more_button
             
 
     def __get_articles_info__(self, query, articles_to_read_count, results_count):
