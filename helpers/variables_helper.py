@@ -17,33 +17,33 @@ def get_work_variables():
     website_query = URLs.WEBSITE_QUERY
 
     try:
-
-        _secret = Vault().get_secret("credentials")
-
-        USER_NAME = _secret["username"]
-        PASSWORD = _secret["password"]
-
         work_items = WorkItems()
         work_items.get_input_work_item()
 
         try:
-            search_phrase = work_items.get_work_item_variable(RPAFilterNames.SEARCH_PHRASE, RPADefaultFilters.SEARCH_PHRASE)
+            search_phrase = work_items.get_work_item_variable(RPAFilterNames.SEARCH_PHRASE)
             if search_phrase == None: search_phrase = RPADefaultFilters.SEARCH_PHRASE
+
+            print_debug_log(f"Loaded input value for 'search_phrase'")
         except Exception as ex:
             print_debug_log(f"Loading default value for 'search_phrase': {ex}")
             search_phrase = RPADefaultFilters.SEARCH_PHRASE
 
         try:
-            news_category_or_section = work_items.get_work_item_variable(RPAFilterNames.NEWS_CATEGORY_OR_SECTION, RPADefaultFilters.NEWS_CATEGORY_OR_SECTION)
-            if not type(news_category_or_section) == list:
+            news_category_or_section = work_items.get_work_item_variable(RPAFilterNames.NEWS_CATEGORY_OR_SECTION)
+            if not type(news_category_or_section) == list and not type(news_category_or_section) == str:
                 news_category_or_section = RPADefaultFilters.NEWS_CATEGORY_OR_SECTION
+
+            print_debug_log(f"Loaded input value for 'news_section'")
         except Exception as ex:
             print_debug_log(f"Loading default value for 'news_section': {ex}")
             news_category_or_section = RPADefaultFilters.NEWS_CATEGORY_OR_SECTION
 
         try:
-            months = work_items.get_work_item_variable(RPAFilterNames.MONTHS, RPADefaultFilters.MONTHS)
+            months = work_items.get_work_item_variable(RPAFilterNames.MONTHS)
             if not type(months) == int or months < 0: months = RPADefaultFilters.MONTHS
+
+            print_debug_log(f"Loaded input value for 'months'")
         except Exception as ex:
             print_debug_log(f"Loading default value for 'months': {ex}")
             months = RPADefaultFilters.MONTHS
