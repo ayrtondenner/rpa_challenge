@@ -1,3 +1,8 @@
+class RPAFilterNames:
+    SEARCH_PHRASE = "search_phrase"
+    NEWS_CATEGORY_OR_SECTION = "news_category_or_section"
+    MONTHS = "months"
+
 class RPADefaultFilters:
     SEARCH_PHRASE = "Economy"
     NEWS_CATEGORY_OR_SECTION = ["Test A", "Business", "Test B", "Opinion", "U.S.", "Week in Review", "World"]
