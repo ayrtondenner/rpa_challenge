@@ -38,39 +38,29 @@ def calculate_start_and_end_date(months):
     """
     today = datetime.datetime.now()
 
-    start_date_string = None
+    # The default value for start date will be the first day of the current month
+    start_date = today.replace(day=1)
+
+    # The end date will always be today
     end_date = today
-    end_date_string = end_date.strftime("%m/%d/%Y")
 
     try:
         # Applying date rules to month variable
-        if months == 0 or months == 1:
-            first_day_of_month = today.replace(day=1)
-        else:
-            start_month = today - relativedelta(months=months - 1)
-            first_day_of_month = start_month.replace(day=1)
+        if months == 0:
+            months = 1
 
-        start_date_string = first_day_of_month.strftime("%m/%d/%Y")
+        start_date = start_date - relativedelta(months = months - 1)
+    except Exception as ex:
+        print_debug_log(f"Error when calculating start and end date from months variable '{months}': {ex}")
+    finally:
+        start_date_string = start_date.strftime("%m/%d/%Y")
         end_date_string = end_date.strftime("%m/%d/%Y")
 
         print_debug_log(f"Start date: {start_date_string}")
         print_debug_log(f"End date: {end_date_string}")
 
-        # Adding one day because whenever we type a date in NYTimes date selector
-        # the date selector will select the previous day
-        start_date = first_day_of_month + datetime.timedelta(days=1)
-        end_date = today + datetime.timedelta(days=1)
-
-        start_date_string = start_date.strftime("%m/%d/%Y")        
-        end_date_string = end_date.strftime("%m/%d/%Y")
-
         assert start_date < end_date, f"Start date {start_date_string} is not smaller than end date {end_date_string}!"
 
-        return start_date_string, end_date_string
-    except Exception as ex:
-        print_debug_log(f"Error when calculating start and end date from months variable '{months}': {ex}")
-        start_date_string = end_date_string
-    finally:
         return start_date_string, end_date_string
 
 def convert_hours_ago_label_to_today_date(date):

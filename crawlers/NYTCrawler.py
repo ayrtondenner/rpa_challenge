@@ -5,7 +5,7 @@ from SeleniumLibrary.errors import ElementNotFound
 from helpers import date_helper
 from helpers.debug_helper import print_debug_log
 
-import re
+import re, time
 from helpers.constants import Regexes, OtherConstants, XPaths
 
 class NYTCrawler(WebCrawler):
@@ -105,10 +105,12 @@ class NYTCrawler(WebCrawler):
             self.__browser__.input_text("startDate", start_date_string)
             self.__browser__.input_text("endDate", end_date_string)
 
-            # Clicking again to dismiss the dialog
-            date_range_selector.click()
         except Exception as ex:
             print_debug_log(f"Error when applying date range filter: {ex}")
+        finally:
+            if "popup-visible" in date_range_selector.get_attribute("class"):
+                # Clicking again to dismiss the dialog
+                date_range_selector.click()
 
         print_debug_log("Date filter done")
 
@@ -143,8 +145,6 @@ class NYTCrawler(WebCrawler):
                 except Exception as ex:
                     print_debug_log(f"Error when trying to select '{news_category}' filter section: {ex}")
 
-            # Clicking again to dismiss the dialog
-            section_selector.click()
         except Exception as ex:
             print_debug_log(f"Error when applying section filter: {ex}")
             print_debug_log(f"Reselecting 'any' section")
@@ -152,6 +152,10 @@ class NYTCrawler(WebCrawler):
             # If any major error happens
             # we will go back to selecting "Any" section
             self.__select_section_any__()
+        finally:
+            # Clicking again to dismiss the dialog
+            if "popup-visible" in section_selector.get_attribute("class"):
+                section_selector.click()
 
         print_debug_log("Section filter done")
 
@@ -170,11 +174,12 @@ class NYTCrawler(WebCrawler):
 
             self.__browser__.click_element(XPaths.SEARCH_PAGE_SECTION_ANY_SELECTOR)
 
-            # Clicking again to dismiss the dialog
-            section_button.click()
-
         except Exception as ex:
             print_debug_log(f"Error when applying 'Any' section filter: {ex}")
+        finally:
+            # Clicking again to dismiss the dialog
+            if "popup-visible" in section_button.get_attribute("class"):
+                section_button.click() 
 
     def __select_sort_by_newest__(self):
         """Select the "sort by newest" option in the search page
@@ -186,12 +191,11 @@ class NYTCrawler(WebCrawler):
 
             sort_selector.click()
             self.__browser__.click_element(XPaths.SEARCH_PAGE_SORT_BY_NEWEST)
-            
-            # Clicking again to dismiss the dialog
-            sort_selector.click()
-            print_debug_log("Selected sort by newest")
         except Exception as ex:
             print_debug_log(f"Error when sorting by newest: {ex}")
+        finally:
+            # Clicking again to dismiss the dialog
+            sort_selector.click()
 
     # In best case scenario, we do not need to press this button
     # since the sort update will already update the query result
@@ -217,24 +221,54 @@ class NYTCrawler(WebCrawler):
         """
         article_info_list = []
 
+        # Let's wait for the page results to load before extracting all articles
+        time.sleep(5)
+
         try:
-            self.__scroll_all_articles__()
-            article_info_list = self.__get_articles_info__(query)
+            article_info_list = self.__scroll_all_articles__(query)
         except Exception as ex:
             print_debug_log(f"Error when extracting articles info: {ex}")
         finally:
             return article_info_list
 
-    def __scroll_all_articles__(self):
+    def __scroll_all_articles__(self, query):
         """Scroll all articles in search page
+
+        Args:
+            query (str): the search query
+
+        Returns:
+            list: the list of articles info dict
         """
+
         print_debug_log("Scrolling articles list")
+        article_info_list = []
+
+        results_count = 0
+
+        # Reading the results count from search page
+        try:
+            results_label = self.__browser__.find_element(XPaths.SEARCH_PAGE_RESULT_LABEL)
+            results_match = re.match(Regexes.SEARCH_PAGE_LABEL_REGEX, results_label.text)
+
+            if results_match:
+                results_count = int(results_match.group(1))
+
+        except Exception as ex:
+            print_debug_log(f"Error when reading search results label: {ex}")
 
         keep_trying = True
         
         while self.__get_element_count__(XPaths.SEARCH_PAGE_SHOW_MORE_BUTTON) == 1 and keep_trying:
             try:
-                keep_trying = self.__click_in_show_more_button__()
+                keep_trying = self.__click_in_show_more_button_and_load_more_data__()
+                articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
+
+                # Today, NYTimes is only loading in batches of 10 articles
+                # But if this changes in the future, it won't affect our bot
+                articles_to_read_count = articles_count - len(article_info_list)
+                article_info_sublist = self.__get_articles_info__(query, articles_to_read_count, results_count)
+                article_info_list.extend(article_info_sublist)
 
             # Sometimes, when clicking the last instance of "show more" button, the following situation appears
             # The bot checks that the button still exists, then NYT website destroys the button, and then the bot will try to click the button that previously existed
@@ -249,12 +283,18 @@ class NYTCrawler(WebCrawler):
             except Exception as ex:
                 print_debug_log(f"Stopped after unexpected \"Exception\" error: {ex}")
 
+        # Scrolling to page bottom
+        self.__browser__.execute_javascript(XPaths.SCROLL_TO_PAGE_BOTTOM)
+
         articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
         print_debug_log(f"Total scrolling of {articles_count} articles")
 
+        return article_info_list
 
-    def __click_in_show_more_button__(self):
-        """Click in the "show more" button
+
+    def __click_in_show_more_button_and_load_more_data__(self):
+        """Click in the "show more" button and load more data
+        This function will finish only after being sure that more data was actually loaded
 
         Returns:
             bool: returns a variable to show if the bot should keeps trying to click in the button
@@ -273,6 +313,9 @@ class NYTCrawler(WebCrawler):
                 # Let's wait for the page to load more articles
                 await_condition = XPaths.SEARCH_PAGE_LOAD_ARTICLES_AWAIT_CONDITION.format(articles_count = articles_count)
                 self.__browser__.wait_for_condition(await_condition, 10)
+
+                # Wait a few seconds to avoid conflict when clicking the button again
+                time.sleep(2)
 
                 break
             
@@ -294,23 +337,20 @@ class NYTCrawler(WebCrawler):
                 print_debug_log(f"Exception when clicking \"show more\" button: {ex}")
                 break
 
-        articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
-        print_debug_log(f"Scrolled through {articles_count} articles")
-
         return keep_trying
             
 
-    def __get_articles_info__(self, query):
+    def __get_articles_info__(self, query, articles_to_read_count, results_count):
         """Get info from all visible articles
 
         Args:
             query (str): the search query
+            articles_to_read_count (int): count of last n articles to read
+            results_count (int): total count of articles
 
         Returns:
-            list: the list of articles info dict
+            list: the list of visible articles info dict
         """
-        print_debug_log("Extracting info from articles")
-
         article_info_list = []
 
         articles_count = self.__get_element_count__(XPaths.ARTICLES_LIST)
@@ -318,7 +358,7 @@ class NYTCrawler(WebCrawler):
         query_lower = query.lower()
 
         # Selenium selector starts from 1
-        for i in range(1, articles_count + 1):
+        for i in range(articles_count - articles_to_read_count + 1, articles_count + 1):
             try:
 
                 
@@ -332,6 +372,7 @@ class NYTCrawler(WebCrawler):
                 # Some articles do not have image
                 if len(self.__browser__.find_elements(picture_xpath)) > 0:
                     picture_url = self.__browser__.find_element(picture_xpath).get_attribute("src")
+                    picture_url = self.__remove_params_from_url_string__(picture_url)
                 
                 date = date_helper.convert_hours_ago_label_to_today_date(date)
                 title_lower = title.lower()
@@ -358,10 +399,11 @@ class NYTCrawler(WebCrawler):
             except Exception as ex:
                 print_debug_log(f"Exception when trying to extract info from article #{i}: {ex}")
 
-            if i % 10 == 0:
-                work_percentage_concluded = round(i / articles_count * 100)
-                print_debug_log(f"Info extracted from {i}/{articles_count} ({work_percentage_concluded}%) articles")
 
-        print_debug_log(f"Info extracted from all {articles_count} articles")
+        if results_count > 0:
+            scroll_percentage = round(articles_count / results_count * 100)
+            print_debug_log(f"Scrolled through {articles_count}/{results_count} ({scroll_percentage}%) articles")
+        else:
+            print_debug_log(f"Scrolled through {articles_count} articles")
         
         return article_info_list

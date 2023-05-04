@@ -24,6 +24,8 @@ class Regexes:
 
     CURRENCY_REGEX_LIST_JOINED = '(?:%s)' % '|'.join(CURRENCY_REGEX_LIST)
 
+    SEARCH_PAGE_LABEL_REGEX = "Showing (\d+) results for:"
+
 class CSVConstants:
     CSV_HEADER = {
         "title": "Title",
@@ -63,6 +65,8 @@ class XPaths:
 
     SEARCH_PAGE_LOAD_ARTICLES_AWAIT_CONDITION = "return document.querySelectorAll(\"ol[data-testid='search-results'] li[data-testid='search-bodega-result']\").length > {articles_count}"
 
+    SEARCH_PAGE_RESULT_LABEL = "xpath://p[@data-testid='SearchForm-status']"
+
     ARTICLES_LIST = "xpath://ol[@data-testid='search-results']//li[@data-testid='search-bodega-result']"
 
     # Using full chained xpath because using element.find_elements to find children only throws exception
@@ -71,3 +75,5 @@ class XPaths:
     ARTICLE_TITLE = f"{ARTICLE_CHILDREN_DIV}div/div/a/h4"
     ARTICLE_DATE = f"{ARTICLE_CHILDREN_DIV}span"
     ARTICLE_DESCRIPTION = f"{ARTICLE_CHILDREN_DIV}div/div/a/p[1]"
+
+    SCROLL_TO_PAGE_BOTTOM = "window.scrollTo(0, document.body.scrollHeight);"
